@@ -1,6 +1,7 @@
 ﻿using ClapRoute.Audio;
 using NAudio.Wave;
 
+
 Console.WriteLine("Microfones encontrados:");
 
 for (int i = 0; i < WaveIn.DeviceCount; i++) //Device Count é uma propriedade estática da classe WaveIn que informa
@@ -19,7 +20,6 @@ Console.WriteLine("====================");
 Console.WriteLine("     ClapRoute      ");
 Console.WriteLine("====================");
 Console.WriteLine();
-Console.WriteLine("1 palma -> Notion");
 Console.WriteLine("2 palmas -> VsCode");
 Console.WriteLine("3 palmas -> ChatGPT");
 Console.WriteLine();
@@ -29,10 +29,14 @@ AudioCapture audio = new AudioCapture();
 
 try
 {
+    Console.WriteLine("Prepare-se...");
+    Thread.Sleep(2000); //faz a thread atual esperar 2 segundos
+
     audio.Iniciar();
-    Console.WriteLine("Microfone iniciado!");
-    Console.WriteLine("Pressione ENTER para encerrar");
-    Console.ReadLine();
+
+    Console.WriteLine("Gravando por 4 segundos (primeiro segundo ignorado)");
+    Thread.Sleep(4000);
+
 }
 
 finally
@@ -41,4 +45,5 @@ finally
     audio.Liberar();
 }
 
+audio.MostrarResultados();
 Console.WriteLine("Captura encerrada. ");
