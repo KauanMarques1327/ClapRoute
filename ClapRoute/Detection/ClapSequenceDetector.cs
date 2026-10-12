@@ -7,7 +7,8 @@ public class ClapSequenceDetector //Contar as palmas e identificar o fim de uma 
     private const int JANELA_SEQUENCIA_MS = 800; //define o intervalo máximo de espera entre palmas da mesma sequência
     private readonly object sincronizacao = new object(); //objeto utilizado para coordenar o acesso aos dados compartilhados
                                                           //readonly significa que não poderemos atribuir outro objeto a esse
-                                                          //campo depois da inicialização exceto durante a construoi  
+                                                          //campo depois da inicialização exceto durante a construão
+    public event Action? VSCodeReconhecido;
 
     public void RegistrarPalma(long instanteAtual) //recebe o instante em ms no qual a palma foi reconhecida
     {
@@ -36,6 +37,7 @@ public class ClapSequenceDetector //Contar as palmas e identificar o fim de uma 
                 if (quantidadePalmas == 2)
                 {
                     Console.WriteLine("COMANDO RECONHECIDO: VS code");
+                    VSCodeReconhecido?.Invoke();
                 }
                 else if (quantidadePalmas == 3)
                 {

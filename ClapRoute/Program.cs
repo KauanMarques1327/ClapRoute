@@ -1,5 +1,6 @@
 ﻿using ClapRoute.Audio;
 using ClapRoute.Detection;
+using ClapRoute.Commands;
 using NAudio.Wave;
 
 
@@ -28,8 +29,19 @@ Console.WriteLine("ClapRoute iniciando...");
 
 AudioCapture audio = new AudioCapture();
 ClapSequenceDetector detector = new ClapSequenceDetector();
+CommandExecutor executor = new CommandExecutor();
+
+//=======================Referências a métodos que serão usados futuramente e não agora========================================//
+
+
 audio.PalmaDetectada += detector.RegistrarPalma; //quando o objeto audio detectar uma palma, execute o método RegistrarPalma
                                                  //do objeto detector   
+
+detector.VSCodeReconhecido += executor.AbrirVSCode; //quando o objeto detector disparar o evento VSCodeReconhecido, execute o 
+                                                    //método AbrirVSCode() do objeto executor
+
+//============================================================================================================================//
+
 
 try
 {
@@ -41,9 +53,20 @@ try
 
     Console.WriteLine("CLAPROUTE PRONTO! Pode bater palmas");
 
-    while (audio.ObterTempoDecorrido() < 4000) //enquanto o cronômetro indicar menos que 4seg continue executando o laço
+    while (true) //enquanto o cronômetro indicar menos que 4seg continue executando o laço
     {
         detector.VerificarSequencia(audio.ObterTempoDecorrido());
+
+        if (Console.KeyAvailable)
+        {
+            ConsoleKeyInfo tecla = Console.ReadKey(intercept: true);
+
+            if (tecla.Key == ConsoleKey.Enter)
+            {
+                Console.WriteLine("Encerrando ClapRoute...");
+                break;
+            }
+        }
         Thread.Sleep(20);
     }
 
@@ -55,5 +78,4 @@ finally
     audio.Liberar();
 }
 
-audio.MostrarResultados();
 Console.WriteLine("Captura encerrada. ");
