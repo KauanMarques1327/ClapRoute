@@ -1,4 +1,5 @@
 ﻿using ClapRoute.Audio;
+using ClapRoute.Detection;
 using NAudio.Wave;
 
 
@@ -26,6 +27,9 @@ Console.WriteLine();
 Console.WriteLine("ClapRoute iniciando...");
 
 AudioCapture audio = new AudioCapture();
+ClapSequenceDetector detector = new ClapSequenceDetector();
+audio.PalmaDetectada += detector.RegistrarPalma; //quando o objeto audio detectar uma palma, execute o método RegistrarPalma
+                                                 //do objeto detector   
 
 try
 {
@@ -33,9 +37,15 @@ try
     Thread.Sleep(2000); //faz a thread atual esperar 2 segundos
 
     audio.Iniciar();
+    Thread.Sleep(1000);
 
-    Console.WriteLine("Gravando por 4 segundos (primeiro segundo ignorado)");
-    Thread.Sleep(4000);
+    Console.WriteLine("CLAPROUTE PRONTO! Pode bater palmas");
+
+    while (audio.ObterTempoDecorrido() < 4000) //enquanto o cronômetro indicar menos que 4seg continue executando o laço
+    {
+        detector.VerificarSequencia(audio.ObterTempoDecorrido());
+        Thread.Sleep(20);
+    }
 
 }
 

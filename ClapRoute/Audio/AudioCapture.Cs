@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace ClapRoute.Audio;
 
-public class AudioCapture
+public class AudioCapture //Capturar o som e detectar eventos individuais de palma
 {
     private WaveIn microfone; //declaração
     double maiorRms = 0;
@@ -19,7 +19,10 @@ public class AudioCapture
     private const int COOLDOWN_MS = 250; //precisamos esperar pelo menos 250 milissegundos entre duas detecções.
     private long instanteUltimaPalma = -COOLDOWN_MS; //armazena o instante da última palma reconhecida, inicializamos dessa
                                                      //dessa forma pois ainda não houve nenhuma palma, assim a primeira
-                                                     //execução não é bloqueada por cooldown inexistente        
+                                                     //execução não é bloqueada por cooldown inexistente     
+    public event Action<long>? PalmaDetectada; //declara um evento que outros objetos podem acompanhar
+                                               //Action<long> representa um método que recebe um <long> e retorna void
+                                               //? indica que o evento pode não ter nenhum método inscrito
 
     private void AoReceberAudio(object? sender, WaveInEventArgs e)
     {
@@ -88,8 +91,17 @@ public class AudioCapture
                 Console.WriteLine("PALMA DETECTADA!");
                 instanteUltimaPalma = instanteAtual; //atualiza a referência temporal para que o cooldown seja contado a partir
                                                      //da última detecção válida
+                PalmaDetectada?.Invoke(instanteAtual); //Se houver alguém inscrito no evento PalmaDetectada, execute os métodos 
+                                                       //inscritos, enviando o instante atual.
+                                                       //?. = execute a operação seguinte somente se o valor não for null
+                                                       //Invoke executa os métodos inscritos nesse evento
             }
         }
+    }
+
+    public long ObterTempoDecorrido()
+    {
+        return cronometro.ElapsedMilliseconds;
     }
 
     public void MostrarResultados()
