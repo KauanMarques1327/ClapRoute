@@ -37,8 +37,8 @@ CommandExecutor executor = new CommandExecutor();
 audio.PalmaDetectada += detector.RegistrarPalma; //quando o objeto audio detectar uma palma, execute o método RegistrarPalma
                                                  //do objeto detector   
 
-detector.VSCodeReconhecido += executor.AbrirVSCode; //quando o objeto detector disparar o evento VSCodeReconhecido, execute o 
-                                                    //método AbrirVSCode() do objeto executor
+detector.VSCodeReconhecido += executor.AlternarVSCode; //quando o objeto detector disparar o evento VSCodeReconhecido, execute o 
+                                                       //método AlternarVSCode() do objeto executor
 
 detector.ChatGPTReconhecido += executor.AbrirChatGPT;
 
