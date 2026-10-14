@@ -24,6 +24,7 @@ public class ClapSequenceDetector //Contar as palmas e identificar o fim de uma 
 
     public void VerificarSequencia(long instanteatual)
     {
+        int comandoReconhecido = 0;
         lock (sincronizacao)
         {
             if (quantidadePalmas == 0)
@@ -33,25 +34,28 @@ public class ClapSequenceDetector //Contar as palmas e identificar o fim de uma 
 
             long tempoDecorrido = instanteatual - instanteUltimaPalma; //calcula a quanto tempo não reconhecemos outra palma
 
-            if (tempoDecorrido >= JANELA_SEQUENCIA_MS)
+            if (tempoDecorrido < JANELA_SEQUENCIA_MS)
             {
-                if (quantidadePalmas == 2)
-                {
-                    Console.WriteLine("COMANDO RECONHECIDO: VS code");
-                    VSCodeReconhecido?.Invoke();
-                }
-                else if (quantidadePalmas == 3)
-                {
-                    Console.WriteLine("COMANDO RECONHECIDO: ChatGPT");
-                    ChatGPTReconhecido?.Invoke();
-
-                }
-                else
-                {
-                    Console.WriteLine("Sequência sem comando associado");
-                }
-                quantidadePalmas = 0; //reinicia o contador para a próxima sequência
+                return;
             }
+            comandoReconhecido = quantidadePalmas;
+            quantidadePalmas = 0;
+        }
+
+        if (comandoReconhecido == 2)
+        {
+            Console.WriteLine("COMANDO RECONHECIDO: VS code");
+            VSCodeReconhecido?.Invoke();
+        }
+        else if (comandoReconhecido == 3)
+        {
+            Console.WriteLine("COMANDO RECONHECIDO: ChatGPT");
+            ChatGPTReconhecido?.Invoke();
+
+        }
+        else
+        {
+            Console.WriteLine("Sequência sem comando associado");
         }
     }
 }
