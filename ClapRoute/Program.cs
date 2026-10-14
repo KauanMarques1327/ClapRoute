@@ -40,6 +40,8 @@ audio.PalmaDetectada += detector.RegistrarPalma; //quando o objeto audio detecta
 detector.VSCodeReconhecido += executor.AbrirVSCode; //quando o objeto detector disparar o evento VSCodeReconhecido, execute o 
                                                     //método AbrirVSCode() do objeto executor
 
+detector.ChatGPTReconhecido += executor.AbrirChatGPT;
+
 //============================================================================================================================//
 
 

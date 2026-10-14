@@ -9,6 +9,7 @@ public class ClapSequenceDetector //Contar as palmas e identificar o fim de uma 
                                                           //readonly significa que não poderemos atribuir outro objeto a esse
                                                           //campo depois da inicialização exceto durante a construão
     public event Action? VSCodeReconhecido;
+    public event Action? ChatGPTReconhecido;
 
     public void RegistrarPalma(long instanteAtual) //recebe o instante em ms no qual a palma foi reconhecida
     {
@@ -42,6 +43,8 @@ public class ClapSequenceDetector //Contar as palmas e identificar o fim de uma 
                 else if (quantidadePalmas == 3)
                 {
                     Console.WriteLine("COMANDO RECONHECIDO: ChatGPT");
+                    ChatGPTReconhecido?.Invoke();
+
                 }
                 else
                 {
