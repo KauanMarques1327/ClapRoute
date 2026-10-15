@@ -2,7 +2,9 @@
 using ClapRoute.Detection;
 using ClapRoute.Commands;
 using ClapRoute.Windows;
+using CLapRoute.Configuration;
 using NAudio.Wave;
+using System.DirectoryServices.ActiveDirectory;
 
 
 Console.WriteLine("Microfones encontrados:");
@@ -32,6 +34,9 @@ AudioCapture audio = new AudioCapture();
 ClapSequenceDetector detector = new ClapSequenceDetector();
 CommandExecutor executor = new CommandExecutor();
 WindowManager gerenciador = new WindowManager();
+AppMenu menu = new AppMenu();
+
+menu.Configurar();
 
 //=======================Referências a métodos que serão usados futuramente e não agora========================================//
 
@@ -39,10 +44,16 @@ WindowManager gerenciador = new WindowManager();
 audio.PalmaDetectada += detector.RegistrarPalma; //quando o objeto audio detectar uma palma, execute o método RegistrarPalma
                                                  //do objeto detector   
 
-detector.VSCodeReconhecido += executor.AlternarVSCode; //quando o objeto detector disparar o evento VSCodeReconhecido, execute o 
-                                                       //método AlternarVSCode() do objeto executor
+detector.VSCodeReconhecido += () => //()=> representa uma expressão lambda que significa que podemos fazer com que o evento
+                                    //execute uma função que consulte uma escolha armazenada no menu
+{
+    executor.ExecutarAplicativo(menu.AplicativoDuasPalmas);
+};
 
-detector.ChatGPTReconhecido += executor.AlternarChatGPT;
+detector.ChatGPTReconhecido += () =>
+{
+    executor.ExecutarAplicativo(menu.AplicativoTresPalmas);
+};
 
 //============================================================================================================================//
 

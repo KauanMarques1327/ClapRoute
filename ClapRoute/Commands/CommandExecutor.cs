@@ -105,4 +105,23 @@ public class CommandExecutor
             AbrirChatGPT();
         }
     }
+    public void ExecutarAplicativo(string aplicativo)
+    {
+        switch (aplicativo)
+        {
+            case "VS Code":
+                AlternarVSCode();
+                break;
+
+            case "ChatGPT":
+                AlternarChatGPT();
+                break;
+
+            default:
+                Console.WriteLine(
+                    $"O aplicativo {aplicativo} ainda não possui comando configurado."
+                );
+                break;
+        }
+    }
 }
