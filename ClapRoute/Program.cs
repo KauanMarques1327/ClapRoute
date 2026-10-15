@@ -1,6 +1,7 @@
 ﻿using ClapRoute.Audio;
 using ClapRoute.Detection;
 using ClapRoute.Commands;
+using ClapRoute.Windows;
 using NAudio.Wave;
 
 
@@ -30,6 +31,7 @@ Console.WriteLine("ClapRoute iniciando...");
 AudioCapture audio = new AudioCapture();
 ClapSequenceDetector detector = new ClapSequenceDetector();
 CommandExecutor executor = new CommandExecutor();
+WindowManager gerenciador = new WindowManager();
 
 //=======================Referências a métodos que serão usados futuramente e não agora========================================//
 
@@ -40,7 +42,7 @@ audio.PalmaDetectada += detector.RegistrarPalma; //quando o objeto audio detecta
 detector.VSCodeReconhecido += executor.AlternarVSCode; //quando o objeto detector disparar o evento VSCodeReconhecido, execute o 
                                                        //método AlternarVSCode() do objeto executor
 
-detector.ChatGPTReconhecido += executor.AbrirChatGPT;
+detector.ChatGPTReconhecido += executor.AlternarChatGPT;
 
 //============================================================================================================================//
 

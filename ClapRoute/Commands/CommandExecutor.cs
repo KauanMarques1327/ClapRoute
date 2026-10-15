@@ -1,4 +1,5 @@
 using System.Diagnostics; //importa classes relacionadas a processos, diagnósticos e execução de programas
+using ClapRoute.Windows;
 
 namespace ClapRoute.Commands;
 
@@ -14,8 +15,9 @@ public class CommandExecutor
 
     public void AbrirChatGPT()
     {
-        Process.Start(new ProcessStartInfo { FileName = "chrome.exe", Arguments = "https://chatgpt.com", UseShellExecute = true });
+        Process.Start(new ProcessStartInfo { FileName = "chrome.exe", Arguments = "--app=https://chatgpt.com", UseShellExecute = true });
         //Windows abra o chrome e passe o endereço do ChatGPT para ele
+        //--app faz o ChatGPT abrir em uma janela independente
     }
 
     public void FecharVSCode()
@@ -82,6 +84,25 @@ public class CommandExecutor
         {
             Console.WriteLine("VS Code fechado. Abrindo...");
             AbrirVSCode();
+        }
+    }
+
+    public void AlternarChatGPT()
+    {
+        WindowManager gerenciador = new WindowManager();
+
+        IntPtr janela = gerenciador.EncontrarJanelaChatGPT();
+
+        if (janela != IntPtr.Zero)
+        {
+            Console.WriteLine("ChatGPT aberto. Solicitando fechamento...");
+            gerenciador.FecharChatGPT();
+        }
+
+        else
+        {
+            Console.WriteLine("ChatGPT fechado. Abrindo...");
+            AbrirChatGPT();
         }
     }
 }
