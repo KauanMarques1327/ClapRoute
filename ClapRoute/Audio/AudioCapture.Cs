@@ -1,100 +1,80 @@
-﻿using NAudio.Wave; //Usar as classes que estão dentro da Pasta Wave da biblioteca NAudio
+﻿using NAudio.Wave;
 using System.Diagnostics;
 
 namespace ClapRoute.Audio;
 
-public class AudioCapture //Capturar o som e detectar eventos individuais de palma
+public class AudioCapture
 {
-    private WaveIn microfone; //declaração
-    double maiorRms = 0;
-    double maiorPico = 0;
-    private double rmsAnterior = 0;
-    private double maiorVariacaoRms = 0;
-    private Stopwatch cronometro = new Stopwatch();
-    private long instanteMaiorPico = 0;
-    private bool primeiraAmostra = true;
-    private const double LIMIAR_VARIACAO = 0.15; //porque está nas faixas que medimos, mas não significa que é o valor ideal
+    private readonly WaveIn microfone;
+    private readonly Stopwatch cronometro = new Stopwatch();
 
-    private const double LIMIAR_PICO = 0.10; //considere valores acima de 0,01 como canidatos a sons fortes
-    private const int COOLDOWN_MS = 250; //precisamos esperar pelo menos 250 milissegundos entre duas detecções.
-    private long instanteUltimaPalma = -COOLDOWN_MS; //armazena o instante da última palma reconhecida, inicializamos dessa
-                                                     //dessa forma pois ainda não houve nenhuma palma, assim a primeira
-                                                     //execução não é bloqueada por cooldown inexistente     
-    public event Action<long>? PalmaDetectada; //declara um evento que outros objetos podem acompanhar
-                                               //Action<long> representa um método que recebe um <long> e retorna void
-                                               //? indica que o evento pode não ter nenhum método inscrito
+    private double rmsAnterior = 0;
+    private bool primeiraAmostra = true;
+
+    private const double LIMIAR_VARIACAO = 0.15;
+    private const int COOLDOWN_MS = 250; //O cooldown serve para evitar que uma única palma seja detectada várias vezes
+    //Quando você bate uma palma, o microfone não recebe apenas uma amostra de áudio. Ele recebe vários blocos consecutivos, 
+    //e o som pode provocar mais de um aumento brusco de RMS.
+
+    private long instanteUltimaPalma = -COOLDOWN_MS;
+
+    public event Action<long>? PalmaDetectada;
+
+    public AudioCapture()
+    {
+        microfone = new WaveIn
+        {
+            WaveFormat = new WaveFormat(44100, 16, 1),
+            BufferMilliseconds = 10
+        };
+
+        microfone.DataAvailable += AoReceberAudio;
+    }
 
     private void AoReceberAudio(object? sender, WaveInEventArgs e)
     {
-        if (cronometro.ElapsedMilliseconds < 1000) //Se ainda não passou um segundo desde o início da captura, 
-                                                   //ignore esse bloco de áudio
+        if (cronometro.ElapsedMilliseconds < 1000) // Ignora o primeiro segundo de captura.
         {
             return;
         }
 
         double somaQuadrados = 0;
         int quantidadeAmostras = 0;
-        double picoMaximo = 0;
-        for (int i = 0; i < e.BytesRecorded; i += 2) //i+=2 pois cada amostra ocupa 2 bytes
+
+        for (int i = 0; i + 1 < e.BytesRecorded; i += 2) // Cada amostra de áudio possui 16 bits (2 bytes).
         {
-            short amostra = BitConverter.ToInt16(e.Buffer, i); //Pegamos 2 bytes do buffer, começando na posição i e 
-                                                               //interprete-os como inteiro de 16 bits com sinal (short)
-
-            double amostraNormalizada = amostra / 32768.0; //Normaliza as amostras de 16 bits para a faixa -1 +1 0
-            double amplitude = Math.Abs(amostraNormalizada); //Math.abs é uma classe que retorna o valor absoluto de um número
-
-            if (amplitude > picoMaximo)
-            {
-                picoMaximo = amplitude;
-            }
-
-
+            short amostra = BitConverter.ToInt16(e.Buffer, i);
+            double amostraNormalizada = amostra / 32768.0; // Normaliza a amostra para aproximadamente -1 a 1.
             somaQuadrados += amostraNormalizada * amostraNormalizada;
-
             quantidadeAmostras++;
         }
 
-        double rms = Math.Sqrt(somaQuadrados / quantidadeAmostras);
+        if (quantidadeAmostras == 0)
+        {
+            return;
+        }
+
+        double rms = Math.Sqrt(somaQuadrados / quantidadeAmostras); // Calcula o RMS do bloco de áudio.
 
         double variacaoRms = 0;
+
         if (!primeiraAmostra)
         {
-            //No primeiro bloco válido apenas armazenamos o RMS, a partir do segundo começamos a calcular a variação
             variacaoRms = rms - rmsAnterior;
         }
+
         rmsAnterior = rms;
         primeiraAmostra = false;
 
-        if (rms > maiorRms) //registra o maior RMS (a maior intensidade média registrada em um bloco)
+        if (variacaoRms > LIMIAR_VARIACAO) // Detecta aumentos bruscos na amplitude efetiva do áudio.
         {
-            maiorRms = rms;
-        }
+            long instanteAtual = cronometro.ElapsedMilliseconds;
 
-        if (picoMaximo > maiorPico) //registra o maior pico de amplitude (a maior amplitude instantânea registrada)
-        {
-            maiorPico = picoMaximo;
-            instanteMaiorPico = cronometro.ElapsedMilliseconds; //retorna o tempo total decorrido em milissegundos desde que a
-                                                                //que a contagem foi iniciada
-        }
-
-        if (variacaoRms > maiorVariacaoRms) //o maior aumento de RMS (maior aumento de intensidade entre 2 blocos consecutivos )
-        {
-            maiorVariacaoRms = variacaoRms;
-        }
-
-        if (variacaoRms > LIMIAR_VARIACAO)
-        {
-            long instanteAtual = cronometro.ElapsedMilliseconds; //quantos milissegundos passaram desde o inicio do cronômetro
-
-            if (instanteAtual - instanteUltimaPalma >= COOLDOWN_MS) //ja se passaram pelo menos 250ms desde a última palma?
+            if (instanteAtual - instanteUltimaPalma >= COOLDOWN_MS) // Evita registrar palmas muito próximas.
             {
                 Console.WriteLine("PALMA DETECTADA!");
-                instanteUltimaPalma = instanteAtual; //atualiza a referência temporal para que o cooldown seja contado a partir
-                                                     //da última detecção válida
-                PalmaDetectada?.Invoke(instanteAtual); //Se houver alguém inscrito no evento PalmaDetectada, execute os métodos 
-                                                       //inscritos, enviando o instante atual.
-                                                       //?. = execute a operação seguinte somente se o valor não for null
-                                                       //Invoke executa os métodos inscritos nesse evento
+                instanteUltimaPalma = instanteAtual;
+                PalmaDetectada?.Invoke(instanteAtual);
             }
         }
     }
@@ -104,25 +84,13 @@ public class AudioCapture //Capturar o som e detectar eventos individuais de pal
         return cronometro.ElapsedMilliseconds;
     }
 
-    public void MostrarResultados()
-    {
-        Console.WriteLine($"Maior RMS: {maiorRms:f8}");
-        Console.WriteLine($"Maior pico: {maiorPico:f8}");
-        Console.WriteLine($"Maior variação RMS: {maiorVariacaoRms:f8}");
-        Console.WriteLine($"Instante do maior pico: {instanteMaiorPico} ms");
-    }
-    public AudioCapture()
-    {
-        microfone = new WaveIn(); //instanciação
-        microfone.WaveFormat = new WaveFormat(44100, 16, 1); // (sample/seg, bits/sample, channel(captura mono))
-        microfone.BufferMilliseconds = 10; //configura a duração solicitada para os buffers de captura em ms
-        microfone.DataAvailable += AoReceberAudio;//quando o mic disponibilizar novos dados, execute meu método
-                                                  //não usamos AoReceberAudio() porque não queremos usar imediatamente
-    }
-
     public void Iniciar()
     {
-        cronometro.Restart(); //reinicia o cronômetro do zero e começa a contagem
+        rmsAnterior = 0; // Reinicia o estado da detecção para uma nova captura.
+        primeiraAmostra = true;
+        instanteUltimaPalma = -COOLDOWN_MS;
+
+        cronometro.Restart();
         microfone.StartRecording();
     }
 
@@ -134,6 +102,6 @@ public class AudioCapture //Capturar o som e detectar eventos individuais de pal
     public void Liberar()
     {
         microfone.DataAvailable -= AoReceberAudio;
-        microfone.Dispose(); //Libera memória manualmente sendo um reforço ao Garbage Collector
+        microfone.Dispose();
     }
 }

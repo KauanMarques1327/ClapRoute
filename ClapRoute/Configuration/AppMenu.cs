@@ -16,6 +16,9 @@ public class AppMenu
 
     public string AplicativoDuasPalmas { get; private set; } = "";
     public string AplicativoTresPalmas { get; private set; } = "";
+    //get: permitem consultar seu valor
+    //set: permitem alterar seu valor somente dentro da classe AppMenu
+    //inicializo as 2 variáveis como strings vazias 
 
     public void Configurar()
     {
@@ -25,7 +28,7 @@ public class AppMenu
 
         AplicativoDuasPalmas = EscolherAplicativo("Escolha o aplicativo para 2 palmas:", aplicativos); //listo os aplicativos
 
-        List<string> opcoesRestantes = new List<string>(aplicativos); //crio uma noma lista
+        List<string> opcoesRestantes = new List<string>(aplicativos); //crio uma nova lista
 
         opcoesRestantes.Remove(AplicativoDuasPalmas); //removo dessa nova lista o app q escolhi em 2 palmas
 
@@ -53,15 +56,11 @@ public class AppMenu
 
             string? entrada = Console.ReadLine(); //escolho um 
 
-            if (int.TryParse(entrada, out int numero) && //verifico se o usuário digitou um número válido, maior que 1 e dentro
-                                                         //das opções disponíveis   
-                numero >= 1 &&
-                numero <= opcoes.Count)
+            if (int.TryParse(entrada, out int numero) && numero >= 1 && numero <= opcoes.Count)
             {
+                //verifico se o usuário digitou um número válido, maior que 1 e dentro das opções disponíveis
                 string escolhido = opcoes[numero - 1];
-
                 Console.WriteLine($"Você escolheu: {escolhido}");
-
                 return escolhido;
             }
             Console.WriteLine("Opção inválida. Tente novamente.");

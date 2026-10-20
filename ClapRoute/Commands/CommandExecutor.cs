@@ -1,80 +1,77 @@
-using System.Diagnostics; //importa classes relacionadas a processos, diagnósticos e execução de programas
+using System.Diagnostics;
 using ClapRoute.Windows;
 
 namespace ClapRoute.Commands;
 
-public class CommandExecutor
+public class CommandExecutor  // Armazena as janelas abertas pelo ClapRoute.
 {
-    public void AbrirVSCode()
+    private readonly Dictionary<string, (IntPtr Janela, int Processo)> janelasAbertas = new();
+    //readonly: impede que o campo receba outro dicionário depois da inicialização
+    //Dictionary: uma coleção que armazena pares de chave e valor
+    //(IntPtr Janela, int Processo): uma tupla que armazena HWND e PID
+    //IntPtr: inteiro de ponteiro, usado para guardar HWND(Handle to a Window)
+    //IntPtr.Zero representa um identificador ou ponteiro de valor zero.
+    private readonly WindowManager gerenciador = new();
+    private readonly object trava = new();
+
+    // Abre o VS Code.
+    private void AbrirVSCode()
     {
         Process.Start(new ProcessStartInfo { FileName = "code", UseShellExecute = true });
-        //Process.Start é um método que solicita ao sistema operacional que inicie um processo
-        //PrcecessStartInfo é uma classe que permite configurar como um processo será iniciado
-        //Em seguida é indicado o comando utilizado para iniciar o VS Code e solicita que o Windows Shell execute
     }
 
-    public void AbrirChatGPT()
+    private void FecharVSCode()
     {
-        Process.Start(new ProcessStartInfo { FileName = "chrome.exe", Arguments = "--app=https://chatgpt.com", UseShellExecute = true });
-        //Windows abra o chrome e passe o endereço do ChatGPT para ele
-        //--app faz o ChatGPT abrir em uma janela independente
-    }
+        Process[] processos = Process.GetProcessesByName("Code");
 
-    public void FecharVSCode()
-    {
-        Process[] processos = Process.GetProcessesByName("Code"); //Process é uma classe do .NET que representa os processos do SO
-                                                                  //Process[] é um array de objetos dessa classe
-                                                                  //GetProcessesByName procura processos cujo nome seja (...)
         foreach (Process processo in processos)
         {
             try
             {
-                if (processo.MainWindowHandle != IntPtr.Zero) //Se o processo possui uma janela principal identificável,
-                                                              //podemos tentar solicitar seu fechamento.
+                if (processo.MainWindowHandle != IntPtr.Zero) //é uma propriedade que retorna o identificador da janela principal 
                 {
-                    bool fechamentoSolicitado = processo.CloseMainWindow(); //Solicita que a janela seja fechada normalmente.
+                    bool fechamentoSolicitado = processo.CloseMainWindow();
 
                     if (fechamentoSolicitado)
                     {
-                        Console.WriteLine("Fechamento do VS Code solicitado");
+                        Console.WriteLine("Fechamento do VS Code solicitado.");
                     }
                 }
             }
             catch (InvalidOperationException)
             {
-                Console.WriteLine("Um processo do VS Code já foi encerrado");
+                // O processo pode ter sido encerrado durante a verificação.
             }
             finally
             {
-                processo.Dispose();
+                processo.Dispose(); //Libera recursos não gerenciados de forma imediata e determinística sem esperar o GC
             }
         }
     }
 
-    public void AlternarVSCode()
+    private void AlternarVSCode() //Alterna entre abrir e fechar o VS Code.
     {
-        Process[] processos = Process.GetProcessesByName("Code");
-
         bool vscodeAberto = false;
 
-        foreach (Process processo in processos)
+        foreach (Process processo in Process.GetProcessesByName("Code"))
         {
             try
             {
-                if (processo.MainWindowHandle != IntPtr.Zero) //Quando encontramos um processo, atualizamos a variável
+                if (processo.MainWindowHandle != IntPtr.Zero) //
                 {
                     vscodeAberto = true;
                 }
             }
             catch (InvalidOperationException)
             {
-                //O processo pode ter sido encerrado durante a verificação
+                // O processo pode ter sido encerrado durante a verificação.
             }
             finally
             {
-                processo.Dispose(); //liberar manualmente recursos não gerenciados
+                processo.Dispose();
             }
         }
+
         if (vscodeAberto)
         {
             Console.WriteLine("VS Code aberto. Solicitando fechamento...");
@@ -87,24 +84,7 @@ public class CommandExecutor
         }
     }
 
-    public void AlternarChatGPT()
-    {
-        WindowManager gerenciador = new WindowManager();
-
-        IntPtr janela = gerenciador.EncontrarJanelaChatGPT();
-
-        if (janela != IntPtr.Zero)
-        {
-            Console.WriteLine("ChatGPT aberto. Solicitando fechamento...");
-            gerenciador.FecharChatGPT();
-        }
-
-        else
-        {
-            Console.WriteLine("ChatGPT fechado. Abrindo...");
-            AbrirChatGPT();
-        }
-    }
+    // Executa o comando associado ao aplicativo escolhido.
     public void ExecutarAplicativo(string aplicativo)
     {
         switch (aplicativo)
@@ -114,14 +94,121 @@ public class CommandExecutor
                 break;
 
             case "ChatGPT":
-                AlternarChatGPT();
+                AlternarSite("ChatGPT", "https://chatgpt.com");
+                break;
+
+            case "YouTube":
+                AlternarSite("YouTube", "https://www.youtube.com");
+                break;
+
+            case "WhatsApp Web":
+                AlternarSite("WhatsApp Web", "https://web.whatsapp.com");
+                break;
+
+            case "Instagram":
+                AlternarSite("Instagram", "https://www.instagram.com");
+                break;
+
+            case "Notion":
+                AlternarSite("Notion", "https://www.notion.so");
+                break;
+
+            case "Gemini":
+                AlternarSite("Gemini", "https://gemini.google.com");
+                break;
+
+            case "Claude":
+                AlternarSite("Claude", "https://claude.ai");
                 break;
 
             default:
-                Console.WriteLine(
-                    $"O aplicativo {aplicativo} ainda não possui comando configurado."
-                );
+                Console.WriteLine($"O aplicativo {aplicativo} ainda não possui comando configurado.");
                 break;
+        }
+    }
+
+    private void AbrirSite(string url) // Abre um site em uma janela independente do Chrome.
+    {
+        Process.Start(new ProcessStartInfo { FileName = "chrome.exe", Arguments = $"--app=\"{url}\"", UseShellExecute = true });
+    }
+
+    private void AlternarSite(string aplicativo, string url) // Alterna entre abrir e fechar uma janela de site
+    {
+        lock (trava) //Mecanismos de sincronização entre threads
+        {
+            if (janelasAbertas.TryGetValue(aplicativo, out var registro))//Verifica se o aplicativo possui uma janela registrada.
+            {
+                if (gerenciador.JanelaChromeValida(registro.Janela, registro.Processo))
+                {
+                    Console.WriteLine($"{aplicativo} aberto. Solicitando fechamento...");
+
+                    bool fechamentoSolicitado = gerenciador.FecharJanela(registro.Janela);
+
+                    if (fechamentoSolicitado)
+                    {
+                        janelasAbertas.Remove(aplicativo);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Não foi possível solicitar o fechamento.");
+                    }
+
+                    return;
+                }
+
+                janelasAbertas.Remove(aplicativo); // Descarta registros de janelas que não existem mais.
+            }
+
+            Console.WriteLine($"{aplicativo} fechado. Abrindo...");
+
+            HashSet<IntPtr> janelasAntes = gerenciador.ObterJanelasChrome(); //Registra janelas existentes antes de abrir o site.
+            //HashSet não permite elementos repetidos
+
+            AbrirSite(url);
+
+            IntPtr novaJanela = IntPtr.Zero; //Inicio a variável novaJanela com valor 0
+
+            for (int tentativa = 0; tentativa < 20; tentativa++)
+            {
+                Thread.Sleep(200);
+
+                HashSet<IntPtr> janelasDepois = gerenciador.ObterJanelasChrome();
+
+                janelasDepois.ExceptWith(janelasAntes); //Mantém apenas as janelas que não existiam antes.
+
+                if (janelasDepois.Count == 1)
+                {
+                    novaJanela = janelasDepois.First(); //retorna o primeiro elemento da coleção
+                    break;
+                }
+
+                if (janelasDepois.Count > 1)
+                {
+                    Console.WriteLine("Mais de uma janela apareceu. Registro cancelado.");
+                    return;
+                }
+            }
+
+            if (novaJanela == IntPtr.Zero)
+            {
+                Console.WriteLine("Não foi possível identificar a janela aberta.");
+                return;
+            }
+
+            int processo = gerenciador.ObterProcessoDaJanela(novaJanela); //processo armazena o PID (Process Identifier)
+
+            if (processo == 0)
+            {
+                Console.WriteLine("Não foi possível validar o processo da janela.");
+                return;
+            }
+
+            janelasAbertas[aplicativo] = (novaJanela, processo);
+            //janelasAbertas é uma variável que armazena um dicionário. Cada chave é uma string contendo o nome do aplicativo
+            //cada valor dessa variável é uma tupla contendo o HWND e o PID
+
+            Console.WriteLine($"{aplicativo} registrado com sucesso.");
+
         }
     }
 }

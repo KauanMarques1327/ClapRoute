@@ -8,8 +8,8 @@ public class ClapSequenceDetector //Contar as palmas e identificar o fim de uma 
     private readonly object sincronizacao = new object(); //objeto utilizado para coordenar o acesso aos dados compartilhados
                                                           //readonly significa que não poderemos atribuir outro objeto a esse
                                                           //campo depois da inicialização exceto durante a construão
-    public event Action? VSCodeReconhecido;
-    public event Action? ChatGPTReconhecido;
+    public event Action? DuasPalmasReconhecidas;
+    public event Action? TresPalmasReconhecidas;
 
     public void RegistrarPalma(long instanteAtual) //recebe o instante em ms no qual a palma foi reconhecida
     {
@@ -44,13 +44,11 @@ public class ClapSequenceDetector //Contar as palmas e identificar o fim de uma 
 
         if (comandoReconhecido == 2)
         {
-            Console.WriteLine("COMANDO RECONHECIDO: VS code");
-            VSCodeReconhecido?.Invoke();
+            DuasPalmasReconhecidas?.Invoke();
         }
         else if (comandoReconhecido == 3)
         {
-            Console.WriteLine("COMANDO RECONHECIDO: ChatGPT");
-            ChatGPTReconhecido?.Invoke();
+            TresPalmasReconhecidas?.Invoke();
 
         }
         else
